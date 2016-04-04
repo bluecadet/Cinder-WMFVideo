@@ -94,6 +94,8 @@ public:
 	void	draw( int x, int y , int w, int h );
 	void	draw( int x, int y ) { draw( x, y, getWidth(), getHeight() ); }
 
+    ci::gl::TextureRef getTexture();
+
 	HWND getHandle() const { return _hwndPlayer; }
 	LRESULT WndProc( HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam );
 

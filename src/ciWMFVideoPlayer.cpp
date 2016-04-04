@@ -141,7 +141,6 @@ bool ciWMFVideoPlayer::loadMovie( const fs::path &filePath, const string &audioD
 			format.setTargetRect();
 			format.loadTopDown(true);
 			_tex = gl::Texture::create(_width,_height, format);
-			//_tex.allocate(_width,_height,GL_RGBA,true);
 			_player->m_pEVRPresenter->createSharedTexture(_width, _height, _tex->getId());
 		}
 	}
@@ -174,8 +173,12 @@ bool  ciWMFVideoPlayer:: isPaused()
 
  void	ciWMFVideoPlayer::	close() {
 	 _player->Shutdown();
-
 }
+
+ ci::gl::TextureRef ciWMFVideoPlayer::getTexture() {
+     return _tex;
+ }
+
 void	ciWMFVideoPlayer::	update() {
 	if (!_player) return;
 	if ((_waitForLoadedToPlay) && _player->GetState() == Paused)
