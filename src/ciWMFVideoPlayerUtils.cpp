@@ -325,7 +325,7 @@ done:
 		case MF_E_UNSUPPORTED_BYTESTREAM_TYPE:
 			CI_LOG_E("MF_E_UNSUPPORTED_BYTESTREAM_TYPE"); break;
 		default:
-			CI_LOG_E("Unknown eror"); break;
+			//CI_LOG_E("Unknown eror"); break;
 		break;
 		}
 	}

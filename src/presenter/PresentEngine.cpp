@@ -135,12 +135,12 @@ void D3DPresentEngine::releaseSharedTexture()
 {
 	if (!gl_handleD3D) return;
 	wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle);
-	//wglDXUnregisterObjectNV(gl_handleD3D,gl_handle);	// Apparently causes access violations?
-	//glDeleteTextures(1, &gl_name);
+    wglDXUnregisterObjectNV(gl_handleD3D, gl_handle);
+	glDeleteTextures(1, &gl_name);
 	SAFE_RELEASE(d3d_shared_surface);
 	SAFE_RELEASE(d3d_shared_texture);
-
 }
+ 
 bool D3DPresentEngine::lockSharedTexture()
 {
 	if (!gl_handleD3D) return false;
@@ -154,9 +154,6 @@ bool D3DPresentEngine::unlockSharedTexture()
 	if (!gl_handle) return false;
 	return wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle);
 }
-
-
-
 
 
 //-----------------------------------------------------------------------------

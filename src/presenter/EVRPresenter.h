@@ -27,7 +27,7 @@
 #include <evcode.h> // EVR event codes (IMediaEventSink)
 
 // Common helper code.
-#define USE_LOGGING
+//#define USE_LOGGING
 #include "common/common.h"
 //#include "common/registry.h"
 using namespace MediaFoundationSamples;
