@@ -22,6 +22,10 @@ ciWMFVideoPlayer::ScopedVideoTextureBind::ScopedVideoTextureBind( const ciWMFVid
 	mCtx->pushTextureBinding( mTarget, video.mTex->getId(), mTextureUnit );
 }
 
+ciWMFVideoPlayer::ScopedVideoTextureBind::ScopedVideoTextureBind(const std::shared_ptr<ciWMFVideoPlayer> video, uint8_t textureUnit)
+	:ScopedVideoTextureBind(*video, textureUnit)
+{}
+
 ciWMFVideoPlayer::ScopedVideoTextureBind::~ScopedVideoTextureBind()
 {
 	mCtx->popTextureBinding( mTarget, mTextureUnit );
@@ -151,7 +155,7 @@ void ciWMFVideoPlayer::draw( int x, int y, int w, int h )
 		return;
 	}
 
-	bool success = mPlayer->mEVRPresenter->lockSharedTexture();
+	mPlayer->mEVRPresenter->lockSharedTexture();
 
 	if( mTex ) {
 		Rectf destRect = Rectf( float(x), float(y), float(x + w), float(y + h) );
@@ -172,7 +176,7 @@ void ciWMFVideoPlayer::draw( int x, int y, int w, int h )
 
 	}
 
-	success = mPlayer->mEVRPresenter->unlockSharedTexture();
+	mPlayer->mEVRPresenter->unlockSharedTexture();
 }
 
 bool ciWMFVideoPlayer::isPlaying() const
@@ -241,9 +245,19 @@ double ciWMFVideoPlayer::getDuration() const
 	return mPlayer->getDuration();
 }
 
+float ciWMFVideoPlayer::getVolume()
+{
+	return mPlayer->getVolume();
+}
+
 void ciWMFVideoPlayer::setPosition( double pos )
 {
 	mPlayer->setPosition( pos );
+}
+
+void ciWMFVideoPlayer::setVolume( float vol )
+{
+	mPlayer->setVolume( vol );
 }
 
 void ciWMFVideoPlayer::stepForward()
@@ -258,11 +272,11 @@ void ciWMFVideoPlayer::stepForward()
 	double currentVidPos = mPlayer->getPosition();
 	double targetVidPos = currentVidPos + step;
 
-	if  (mPlayer->GetState() == PAUSED) {
+	if( mPlayer->GetState() == PAUSED ) {
 		play();
 	}
 
-	mPlayer->setPosition(mPlayer->getPosition() + step);
+	mPlayer->setPosition( mPlayer->getPosition() + step );
 	mPlayer->Pause();
 }
 float ciWMFVideoPlayer::getSpeed()
