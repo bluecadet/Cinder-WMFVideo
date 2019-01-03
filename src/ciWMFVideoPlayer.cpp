@@ -9,6 +9,9 @@ using namespace std;
 using namespace ci;
 using namespace ci::app;
 
+typedef std::pair<HWND, ciWMFVideoPlayer*> PlayerItem;
+list<PlayerItem> g_WMFVideoPlayers;
+
 LRESULT CALLBACK WndProc( HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam );
 // Message handlers
 
@@ -30,6 +33,15 @@ ciWMFVideoPlayer::ScopedVideoTextureBind::~ScopedVideoTextureBind()
 {
 	mCtx->popTextureBinding( mTarget, mTextureUnit );
 	mPlayer->mEVRPresenter->unlockSharedTexture();
+}
+
+ciWMFVideoPlayer* findPlayers( HWND hwnd )
+{
+	for each( PlayerItem e in g_WMFVideoPlayers ) {
+		if( e.first == hwnd ) { return e.second; }
+	}
+
+	return NULL;
 }
 
 int  ciWMFVideoPlayer::mInstanceCount = 0;
@@ -72,6 +84,13 @@ ciWMFVideoPlayer::~ciWMFVideoPlayer()
 	}
 
 	CI_LOG_I( "Player " << mId << " Terminated" );
+
+	auto hwnd = mHWNDPlayer;
+
+	g_WMFVideoPlayers.erase(std::remove_if(g_WMFVideoPlayers.begin(), g_WMFVideoPlayers.end(), [hwnd](PlayerItem &p) {
+		return p.first == hwnd;
+	}), g_WMFVideoPlayers.end());
+
 	mInstanceCount--;
 
 	if( mInstanceCount == 0 ) {
@@ -158,7 +177,7 @@ void ciWMFVideoPlayer::draw( int x, int y, int w, int h )
 	mPlayer->mEVRPresenter->lockSharedTexture();
 
 	if( mTex ) {
-		Rectf destRect = Rectf( float(x), float(y), float(x + w), float(y + h) );
+		Rectf destRect = Rectf( x, y, x + w, y + h );
 
 		switch( mVideoFill ) {
 			case VideoFill::FILL:
@@ -179,17 +198,17 @@ void ciWMFVideoPlayer::draw( int x, int y, int w, int h )
 	mPlayer->mEVRPresenter->unlockSharedTexture();
 }
 
-bool ciWMFVideoPlayer::isPlaying() const
+bool ciWMFVideoPlayer::isPlaying()
 {
 	return mPlayer->GetState() == STARTED;
 }
 
-bool ciWMFVideoPlayer::isStopped() const
+bool ciWMFVideoPlayer::isStopped()
 {
 	return ( mPlayer->GetState() == STOPPED || mPlayer->GetState() == PAUSED );
 }
 
-bool ciWMFVideoPlayer::isPaused() const
+bool ciWMFVideoPlayer::isPaused()
 {
 	return mPlayer->GetState() == PAUSED;
 }
@@ -230,17 +249,17 @@ void ciWMFVideoPlayer::pause()
 	mPlayer->Pause();
 }
 
-double ciWMFVideoPlayer::getPosition() const
+float ciWMFVideoPlayer::getPosition()
 {
 	return mPlayer->getPosition();
 }
 
-double ciWMFVideoPlayer::getFrameRate() const
+float ciWMFVideoPlayer::getFrameRate()
 {
 	return mPlayer->getFrameRate();
 }
 
-double ciWMFVideoPlayer::getDuration() const
+float ciWMFVideoPlayer::getDuration()
 {
 	return mPlayer->getDuration();
 }
@@ -250,7 +269,7 @@ float ciWMFVideoPlayer::getVolume()
 	return mPlayer->getVolume();
 }
 
-void ciWMFVideoPlayer::setPosition( double pos )
+void ciWMFVideoPlayer::setPosition( float pos )
 {
 	mPlayer->setPosition( pos );
 }
@@ -267,10 +286,10 @@ void ciWMFVideoPlayer::stepForward()
 	}
 
 	mPlayer->Pause();
-	double fps = mPlayer->getFrameRate();
-	double step = 1.0 / fps;
-	double currentVidPos = mPlayer->getPosition();
-	double targetVidPos = currentVidPos + step;
+	float fps = mPlayer->getFrameRate();
+	float step = 1 / fps;
+	float currentVidPos = mPlayer->getPosition();
+	float targetVidPos = currentVidPos + step;
 
 	if( mPlayer->GetState() == PAUSED ) {
 		play();
@@ -341,23 +360,14 @@ bool ciWMFVideoPlayer::setSpeed( float speed, bool useThinning )
 
 PresentationEndedSignal& ciWMFVideoPlayer::getPresentationEndedSignal()
 {
-	assert( mPlayer );
-	return mPlayer->getPresentationEndedSignal();
+	if( mPlayer ) {
+		return mPlayer->getPresentationEndedSignal();
+	}
 }
 
-int ciWMFVideoPlayer::getHeight() const
-{
-	return mPlayer->getHeight();
-}
-int ciWMFVideoPlayer::getWidth() const
-{
-	return mPlayer->getWidth();
-}
-void ciWMFVideoPlayer::setLoop( bool isLooping )
-{
-	mIsLooping = isLooping;
-	mPlayer->setLooping( isLooping );
-}
+float ciWMFVideoPlayer::getHeight() { return mPlayer->getHeight(); }
+float ciWMFVideoPlayer::getWidth() { return mPlayer->getWidth(); }
+void  ciWMFVideoPlayer::setLoop( bool isLooping ) { mIsLooping = isLooping; mPlayer->setLooping( isLooping ); }
 
 //-----------------------------------
 // Prvate Functions
@@ -375,27 +385,19 @@ void ciWMFVideoPlayer::OnPlayerEvent( HWND hwnd, WPARAM pUnkPtr )
 
 LRESULT CALLBACK WndProcDummy( HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam )
 {
-	ciWMFVideoPlayer *impl = NULL;
-
-	// If the message is WM_NCCREATE we need to hide 'this' in the window long.
-	if( message == WM_NCCREATE ) {
-		impl = reinterpret_cast<ciWMFVideoPlayer*>( ( (LPCREATESTRUCT)lParam )->lpCreateParams );
-		::SetWindowLongPtr( hwnd, GWLP_USERDATA, (__int3264)(LONG_PTR)impl );
-	}
-	else
-		impl = reinterpret_cast<ciWMFVideoPlayer*>( ::GetWindowLongPtr( hwnd, GWLP_USERDATA ) );
-
 	switch( message ) {
 		case WM_CREATE: {
 			return DefWindowProc( hwnd, message, wParam, lParam );
 		}
 
 		default: {
-			if( !impl ) {
+			ciWMFVideoPlayer*   myPlayer = findPlayers( hwnd );
+
+			if( !myPlayer ) {
 				return DefWindowProc( hwnd, message, wParam, lParam );
 			}
 
-			return impl->WndProc( hwnd, message, wParam, lParam );
+			return myPlayer->WndProc( hwnd, message, wParam, lParam );
 		}
 	}
 
@@ -445,12 +447,13 @@ BOOL ciWMFVideoPlayer::InitInstance()
 
 	// Create the application window.
 	hwnd = CreateWindow( szWindowClass, L"", WS_OVERLAPPEDWINDOW,
-	                     CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, NULL, reinterpret_cast<LPVOID>( this ) );
+	                     CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, NULL, NULL );
 
 	if( hwnd == 0 ) {
 		return FALSE;
 	}
 
+	g_WMFVideoPlayers.push_back( std::pair<HWND, ciWMFVideoPlayer*>( hwnd, this ) );
 	HRESULT hr = CPlayer::CreateInstance( hwnd, hwnd, &mPlayer );
 
 	LONG style2 = ::GetWindowLong( hwnd, GWL_STYLE );

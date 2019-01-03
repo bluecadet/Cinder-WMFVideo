@@ -145,14 +145,14 @@ bool D3DPresentEngine::lockSharedTexture()
 {
 	if (!gl_handleD3D) return false;
 	if (!gl_handle) return false;
-	return (bool)( wglDXLockObjectsNV(gl_handleD3D, 1, &gl_handle) == TRUE );
+	return wglDXLockObjectsNV(gl_handleD3D, 1, &gl_handle);
 }
 
 bool D3DPresentEngine::unlockSharedTexture()
 {
 	if (!gl_handleD3D) return false;
 	if (!gl_handle) return false;
-	return (bool)( wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle) == TRUE );
+	return wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle);
 }
 
 

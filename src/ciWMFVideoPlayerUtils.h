@@ -97,33 +97,33 @@ class CPlayer : public IMFAsyncCallback
 		PlayerState GetState() const { return mState; }
 		BOOL HasVideo() const { return ( mVideoDisplay != NULL );  }
 
-		BOOL canRewind() const
+		BOOL canRewind()
 		{
 			DWORD m_caps;
 			mSession->GetSessionCapabilities( &m_caps );
 			return ( ( m_caps & MFSESSIONCAP_RATE_REVERSE ) == MFSESSIONCAP_RATE_REVERSE );
 		}
 
-		double getDuration() const;
-		double getPosition() const;
+		float getDuration();
+		float getPosition();
 
 		HRESULT SetPlaybackRate( BOOL bThin, float rateRequested );
-		float GetPlaybackRate() const;
+		float GetPlaybackRate();
 
-		int getWidth() const { return mWidth; }
-		int getHeight() const { return mHeight; }
+		float getWidth() { return mWidth; }
+		float getHeight() { return mHeight; }
 
-		HRESULT setPosition( double pos );
+		HRESULT setPosition( float pos );
 
-		bool isLooping() const { return mIsLooping; }
+		bool isLooping() { return mIsLooping; }
 		void setLooping( bool isLooping ) { mIsLooping = isLooping; }
 
 		HRESULT setVolume( float vol );
-		float getVolume() const { return mCurrentVolume; }
+		float getVolume() { return mCurrentVolume; }
 
-		double getFrameRate() const;
-		int getCurrentFrame() const;
-		int getTotalNumFrames() const { return mNumFrames; }
+		float getFrameRate();
+		int getCurrentFrame();
+		int getTotalNumFrames() { return mNumFrames; }
 
 		void firstFrame() { setPosition( 0 ); }
 		// void nextFrame();
@@ -173,7 +173,7 @@ class CPlayer : public IMFAsyncCallback
 		IMFAudioStreamVolume* mVolumeControl;
 
 		bool mIsLooping;
-		mutable int mNumFrames;
+		int mNumFrames;
 
 	public:
 		EVRCustomPresenter*	mEVRPresenter; // Custom EVR for texture sharing

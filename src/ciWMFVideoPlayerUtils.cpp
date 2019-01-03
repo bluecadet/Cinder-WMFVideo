@@ -298,9 +298,15 @@ HRESULT CPlayer::OpenURL( const WCHAR* sURL, const WCHAR* audioDeviceId )
 	// 1. Create a new media session.
 	// 2. Create the media source.
 
+	mState = CLOSED; // benjaminbojko: changed to OPEN_PENDING
+
 	// Create the media session.
 	HRESULT hr = CreateSession();
 	CHECK_HR( hr );
+
+	if (!FAILED(hr)) {
+		mState = OPEN_PENDING; // benjaminbojko: changed to OPEN_PENDING on success
+	}
 
 	// Create the media source.
 	hr = CreateMediaSource( sURL, &mSource );
@@ -331,6 +337,10 @@ done:
 				break;
 				break;
 		}
+	}
+
+	if (!FAILED(hr)) {
+		mState = STOPPED; // benjaminbojko: changed to STOPPED on success
 	}
 
 	return hr;
@@ -440,7 +450,7 @@ HRESULT CPlayer::Stop()
 	return hr;
 }
 
-HRESULT CPlayer::setPosition( double pos )
+HRESULT CPlayer::setPosition( float pos )
 {
 	if( mState == OPEN_PENDING ) {
 		CI_LOG_E( "Error cannot seek during opening" );
@@ -452,7 +462,7 @@ HRESULT CPlayer::setPosition( double pos )
 	PlayerState curState = mState;
 	PropVariantInit( &varStart );
 	varStart.vt = VT_I8;
-	varStart.hVal.QuadPart = (LONGLONG)(pos * 10000000.0); //i.e. seeking to pos // should be MFTIME and not float :(
+	varStart.hVal.QuadPart = pos * 10000000.0; //i.e. seeking to pos // should be MFTIME and not float :(
 
 	HRESULT hr = mSession->Start( &GUID_NULL, &varStart );
 
@@ -494,7 +504,7 @@ HRESULT CPlayer::setVolume( float vol )
 	UINT32 nChannels;
 	mVolumeControl->GetChannelCount( &nChannels );
 
-	for( UINT32 i = 0; i < nChannels; i++ ) {
+	for( int i = 0; i < nChannels; i++ ) {
 		mVolumeControl->SetChannelVolume( i, vol );
 	}
 
@@ -1380,9 +1390,9 @@ done:
 /// Extra functions
 //---------------
 
-double CPlayer::getDuration() const
+float CPlayer::getDuration()
 {
-	double duration = 0.0;
+	float duration = 0.0;
 
 	if( mSource == NULL ) {
 		return 0.0;
@@ -1396,7 +1406,7 @@ double CPlayer::getDuration() const
 		hr = pDescriptor->GetUINT64( MF_PD_DURATION, &longDuration );
 
 		if( SUCCEEDED( hr ) ) {
-			duration = (double)longDuration / 10000000.0;
+			duration = ( float )longDuration / 10000000.0;
 		}
 	}
 
@@ -1404,9 +1414,9 @@ double CPlayer::getDuration() const
 	return duration;
 }
 
-double CPlayer::getPosition() const
+float CPlayer::getPosition()
 {
-	double position = 0.0;
+	float position = 0.0;
 
 	if( mSession == NULL ) {
 		return 0.0;
@@ -1420,7 +1430,7 @@ double CPlayer::getPosition() const
 		hr = pClock->GetTime( &longPosition );
 
 		if( SUCCEEDED( hr ) ) {
-			position = (double)longPosition / 10000000.0;
+			position = ( float )longPosition / 10000000.0;
 		}
 	}
 
@@ -1428,9 +1438,9 @@ double CPlayer::getPosition() const
 	return position;
 }
 
-double CPlayer::getFrameRate() const
+float CPlayer::getFrameRate()
 {
-	double fps = 0.0;
+	float fps = 0.0;
 
 	if( mSource == NULL ) {
 		return 0.0;
@@ -1446,7 +1456,7 @@ double CPlayer::getFrameRate() const
 
 	if FAILED( pDescriptor->GetStreamDescriptorCount( &nStream ) ) { goto done; }
 
-	for( DWORD i = 0; i < nStream; i++ ) {
+	for( int i = 0; i < nStream; i++ ) {
 		BOOL selected;
 		GUID type;
 
@@ -1470,7 +1480,7 @@ double CPlayer::getFrameRate() const
 			);
 
 			if( denum != 0 ) {
-				fps = (double) num / (double) denum;
+				fps = ( float ) num / ( float ) denum;
 				mNumFrames = denum;
 			}
 		}
@@ -1490,12 +1500,12 @@ done:
 	return fps;
 }
 
-int CPlayer::getCurrentFrame() const
+int CPlayer::getCurrentFrame()
 {
 	int frame = 0;
 
 	if( mSource == NULL ) {
-		return 0;
+		return 0.0;
 	}
 
 	IMFPresentationDescriptor* pDescriptor = NULL;
@@ -1508,7 +1518,7 @@ int CPlayer::getCurrentFrame() const
 
 	if FAILED( pDescriptor->GetStreamDescriptorCount( &nStream ) ) { goto done; }
 
-	for( DWORD i = 0; i < nStream; i++ ) {
+	for( int i = 0; i < nStream; i++ ) {
 		BOOL selected;
 		GUID type;
 
@@ -1651,7 +1661,7 @@ HRESULT  CPlayer::SetPlaybackRate( BOOL bThin, float rateRequested )
 	return hr;
 }
 
-float  CPlayer::GetPlaybackRate() const
+float  CPlayer::GetPlaybackRate()
 {
 	HRESULT hr = S_OK;
 	IMFRateControl* pRateControl = NULL;
